@@ -120,7 +120,7 @@ python -m http.server 9800
 
 In your browser, go to:
 
-👉 **http://localhost:9800**
+👉 **[http://localhost:9800](http://localhost:9800/index_simple_web.html)**
 
 ---
 
