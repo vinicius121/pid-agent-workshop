@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RoboAgent PID — Workshop Panel</title>
+  <style>
+    :root{
+      --bg0:#0b1220;
+      --card:rgba(16,24,40,.80);
+      --stroke:rgba(120,150,220,.20);
+      --text:#e6eefc;
+      --muted:rgba(230,238,252,.72);
+      --field:rgba(10,16,30,.60);
+      --field2:rgba(10,16,30,.75);
+      --good:rgba(34,197,94,.22);
+      --goodStroke:rgba(34,197,94,.40);
+      --danger:rgba(255,95,110,.85);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1100px 600px at 20% 0%, #182238 0%, var(--bg0) 55%, #070b14 100%);
+    }
+    .wrap{ padding:18px; max-width:1220px; margin:0 auto; }
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      background: var(--card); border:1px solid var(--stroke);
+      border-radius:20px; padding:16px 18px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.38);
+    }
+    .title{ font-weight:850; font-size:20px; letter-spacing:.01em; }
+    .subtitle{ color:var(--muted); font-size:13px; margin-top:3px; }
+    .pills{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 12px; border-radius:999px;
+      border:1px solid rgba(120,150,220,.26);
+      background: rgba(14,22,38,.60);
+      font-size:12px; color:rgba(230,238,252,.88);
+      white-space:nowrap;
+    }
+    .row{ display:grid; grid-template-columns: 360px 1fr; gap:16px; margin-top:16px; }
+    .card{
+      background: var(--card); border:1px solid var(--stroke);
+      border-radius:20px; padding:16px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.38);
+    }
+    h3{ margin:0 0 12px 0; font-size:14px; letter-spacing:.02em; color:rgba(230,238,252,.94); }
+    .sectionLabel{ margin-top:14px; font-size:12px; color:rgba(230,238,252,.78); }
+    label{ display:block; font-size:12px; color:var(--muted); margin:10px 0 7px; }
+    select, input[type="number"], textarea{
+      width:100%; padding:11px 12px; border-radius:14px;
+      border:1px solid rgba(120,150,220,.24);
+      background: var(--field); color: var(--text);
+      outline:none; resize: vertical;
+    }
+    select, input[type="number"]{
+      width:100%; padding:11px 12px; border-radius:14px;
+      border:1px solid rgba(120,150,220,.24);
+      background: var(--field); color: var(--text);
+      outline:none;
+    }
+    select:focus, input[type="number"]:focus{ border-color:rgba(160,200,255,.50); background: var(--field2); }
+    .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .btnrow{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+    button{
+      padding:11px 12px; border-radius:16px; border:1px solid rgba(120,150,220,.22);
+      background: rgba(10,16,30,.55); color: var(--text);
+      cursor:pointer; font-weight:650;
+    }
+    button.primary{ background: var(--good); border-color: var(--goodStroke); }
+    button:active{ transform: translateY(1px); }
+    .sliderRow{
+      display:grid; grid-template-columns: 36px 1fr 56px;
+      gap:10px; align-items:center; margin-top:10px;
+    }
+    input[type="range"]{ width:100%; }
+    .val{ text-align:right; color:rgba(230,238,252,.86); font-variant-numeric: tabular-nums; }
+    .small{ font-size:12px; color:var(--muted); line-height:1.35; }
+    pre{
+      white-space: pre-wrap; word-break: break-word;
+      background: rgba(10,16,30,.55);
+      border:1px solid rgba(120,150,220,.18);
+      border-radius:16px;
+      padding:11px 12px;
+      color: rgba(230,238,252,.92);
+      font-size:12px;
+      margin:10px 0 0 0;
+      min-height: 84px;
+    }
+
+    .simHeader{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .simTitle{ font-weight:800; }
+    .simMeta{ color:var(--muted); font-size:12px; margin-top:4px; }
+    .simStack{ display:grid; grid-template-rows: auto auto; gap:14px; margin-top:12px; }
+    canvas{
+      width:100%; height:420px;
+      border-radius:16px;
+      background: rgba(10,16,30,.78);
+      border:1px solid rgba(120,150,220,.15);
+      display:block;
+    }
+    #errPlot{ height:220px; }
+    #uPlot{ height:220px; }
+    .hint{
+      margin-top:12px;
+      border-top:1px solid rgba(120,150,220,.18);
+      padding-top:12px;
+    }
+
+    @media (max-width: 980px){
+      .row{ grid-template-columns: 1fr; }
+      #errPlot{ height:240px; }
+      #uPlot{ height:240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <div class="title">RoboAgent PID</div>
+        <div class="subtitle">Workshop interactive panel — LLM calls only on “Suggest gains”.</div>
+      </div>
+      <div class="pills">
+        <span class="pill" id="pillTask">System: UFO</span>
+        <span class="pill" id="pillMode">Controller: PID</span>
+        <span class="pill" id="pillState">e=0.00 u=0.0</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <h3>Controls</h3><label>Tuning method</label>
+        <select id="tuneStyle">
+          <option value="no_tools" selected>LLM-only (no tools)</option>
+          <option value="agent_tool">Agent (tool enabled)</option>
+        </select>
+        <div class="grid2">
+          <div>
+            <label>dt (s)</label>
+            <input id="dt" type="number" step="0.01" min="0.01" max="0.2" value="0.05"/>
+          </div>
+          <div>
+            <label>θ₀ (rad)</label>
+            <input id="theta0" type="number" step="0.1" min="-6.0" max="6.0" value="3.0"/>
+          </div>
+        </div>
+
+        <div class="btnrow">
+          <button id="playBtn" class="primary">Play</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+
+        <div class="sectionLabel">Gains</div>
+        <div class="sliderRow">
+          <div>Kp</div>
+          <input id="kp" type="range" min="0" max="10" step="0.1" value="2.0"/>
+          <div class="val" id="kpVal">2.0</div>
+        </div>
+        <div class="sliderRow">
+          <div>Ki</div>
+          <input id="ki" type="range" min="0" max="2" step="0.01" value="0.05"/>
+          <div class="val" id="kiVal">0.05</div>
+        </div>
+        <div class="sliderRow">
+          <div>Kd</div>
+          <input id="kd" type="range" min="0" max="5" step="0.1" value="0.6"/>
+          <div class="val" id="kdVal">0.6</div>
+        </div>
+
+        <div class="btnrow" style="grid-template-columns:1fr;">
+          <button id="suggestBtn" class="primary">Suggest gains</button>
+        </div>
+        <div class="btnrow">
+          <button id="kickBtn">Kick θ +20°</button>
+          <button id="zeroBtn">Set θ=0</button>
+        </div>
+
+        <label>Meta trace (last tune)</label>
+        <pre id="metaBox">Press “Suggest gains” to see whether the agent called a tool.</pre>
+
+        <div class="hint small">
+          <div><b>Tips</b></div>
+          <ul style="margin:6px 0 0 18px; padding:0;">
+            <li>Simulation uses deterministic PID via <code>/control</code>.</li>
+            <li>Only <code>/tune</code> calls OpenAI (1 request per click).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="simHeader">
+          <div>
+            <div class="simTitle">Simulation</div>
+            <div class="simMeta">World (top) + plots (bottom). Drag the UFO.</div>
+          </div>
+        </div>
+
+        <div class="simStack">
+          <canvas id="world" width="960" height="520"></canvas>
+          <canvas id="errPlot" width="960" height="260"></canvas>
+          <canvas id="uPlot" width="960" height="260"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
