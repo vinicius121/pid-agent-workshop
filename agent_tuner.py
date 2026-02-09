@@ -7,11 +7,6 @@ Goal for the workshop:
     1) LLM-only: the model reasons and proposes gains (no tools)
     2) With tool: the model may call ONE deterministic tool:
          compute_pid_gains(theta0, dt)
-
-Key teaching points:
-- Structured output (GainsOut)
-- Deterministic tool call vs. pure reasoning
-- A clear mental model (no auto-tune loop)
 """
 
 import os
@@ -26,7 +21,7 @@ from agents.items import ToolCallItem, ToolCallOutputItem
 from ufo_sim import clamp
 
 load_dotenv()
-
+show_raw_output = True
 
 # ----------------------------------------------------------------------------
 # 1) Structured output schema (what the model must return)
@@ -47,13 +42,6 @@ class GainsOut(BaseModel):
 def compute_pid_gains(theta0: float, dt: float) -> Dict[str, Any]:
     """\
     Deterministic, explainable heuristic for PID gains.
-
-    Intuition:
-    - Larger |theta0| -> slightly higher kp (more authority to correct bigger disturbance)
-    - Smaller dt -> slightly lower kd (less derivative noise sensitivity)
-    - Keep ki small for stability (avoid windup), but nonzero to remove small bias
-
-    All outputs are clamped to the UI slider ranges.
     """
 
     dt = max(float(dt), 1e-3)
@@ -75,8 +63,9 @@ def compute_pid_gains(theta0: float, dt: float) -> Dict[str, Any]:
         kd *= 1.15
     kd = clamp(kd, 0.0, 5.0)
     
-    if a > 2.5:
-        kp, ki, kd = 3.9, 1.17, 2.9
+    # Add another heuristic condition
+    
+    ###TODO
 
     note = "Deterministic heuristic: kp scales with |theta0|, kd adjusted for dt; ki kept small."
     return {"kp": kp, "ki": ki, "kd": kd, "note": note}
@@ -89,10 +78,7 @@ DEFAULT_INSTRUCTIONS = (
     "You tune PID gains for a UFO attitude controller.\n"
     "Plant state: theta (rad) and omega (rad/s). Goal is theta -> 0.\n"
     "Return GainsOut (kp, ki, kd, optional note).\n"
-    "Prefer stable, low-overshoot gains.\n"
-    "If a tool is available, you may call it to get a deterministic baseline.\n"
 )
-
 
 def build_agent(style: Literal["no_tools", "agent_tool"]) -> Agent:
     """\
@@ -103,20 +89,10 @@ def build_agent(style: Literal["no_tools", "agent_tool"]) -> Agent:
 
     model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 
-    if style == "no_tools":
-        return Agent(
-            name="UFO PID Tuner (LLM-only)",
-            instructions=DEFAULT_INSTRUCTIONS + "\nYou do NOT have access to tools.",
-            model=model,
-            output_type=GainsOut,
-        )
-
     return Agent(
         name="UFO PID Tuner (With tool)",
-        instructions=DEFAULT_INSTRUCTIONS + "\nYou MAY call compute_pid_gains(theta0, dt).",
+        instructions=DEFAULT_INSTRUCTIONS,
         model=model,
-        tools=[compute_pid_gains],
-        output_type=GainsOut,
     )
 
 
@@ -128,7 +104,7 @@ def format_user_prompt(dt: float, theta0: float) -> str:
         "Tune PID gains for the UFO attitude controller.\n"
         f"- dt: {float(dt)}\n"
         f"- initial condition: theta0 = {float(theta0)} rad, omega0 = 0 rad/s\n"
-        "Goal: theta -> 0 with stable, low-overshoot response.\n"
+        "Goal: theta -> 0 \n"
     )
 
 
@@ -162,8 +138,25 @@ def tune_gains(dt: float, theta0: float, style: Literal["no_tools", "agent_tool"
 
     result = Runner.run_sync(agent, user_prompt)
     trace = extract_tool_trace(result)
+    
+    raw_output: str = result.final_output
+    
+    if show_raw_output:
+        return {
+            "kp": 0.0,
+            "ki": 0.0,
+            "kd": 0.0,
+            "note": "",
+            "meta": {
+                "mode": "single_shot",
+                "style": style,
+                **trace,
+                "raw_model_output": raw_output,
+            },
+        }
 
     out: GainsOut = result.final_output
+
     return {
         "kp": clamp(float(out.kp), 0.0, 10.0),
         "ki": clamp(float(out.ki), 0.0, 2.0),
