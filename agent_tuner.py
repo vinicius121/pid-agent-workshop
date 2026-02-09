@@ -77,7 +77,7 @@ def compute_pid_gains(theta0: float, dt: float) -> Dict[str, Any]:
 DEFAULT_INSTRUCTIONS = (
     "You tune PID gains for a UFO attitude controller.\n"
     "Plant state: theta (rad) and omega (rad/s). Goal is theta -> 0.\n"
-    "Return GainsOut (kp, ki, kd, optional note).\n"
+    "Return the PID agins: kp, ki, kd.\n"
 )
 
 def build_agent(style: Literal["no_tools", "agent_tool"]) -> Agent:
@@ -93,6 +93,7 @@ def build_agent(style: Literal["no_tools", "agent_tool"]) -> Agent:
         name="UFO PID Tuner (With tool)",
         instructions=DEFAULT_INSTRUCTIONS,
         model=model,
+        
     )
 
 
